@@ -1,0 +1,82 @@
+---
+title: "R Notebook on parsing travel data from GISAID meta data sources"
+output: html_notebook
+author: Yuanyuan Wang
+date: 05/03/2021
+---
+### A list of relevant packages 
+```{r}
+packages <- c("countrycode",
+              "ggplot2",
+              "stringr",
+              "formattable",
+              "VennDiagram",
+              "zoo",
+              "devtools",
+              "dplyr",
+              "tidyr",
+              "data.table",
+              "webshot",
+              "htmltools")
+```
+### Install packages (only first time)
+```{r}
+invisible(lapply(packages, install.packages, character.only = TRUE))
+install.packages("quanteda", dependencies = TRUE, INSTALL_opts = '--no-lock')
+```
+### Load packages (every time)
+```{r}
+###
+invisible(lapply(packages, library, character.only = TRUE))
+library("quanteda")
+```
+### Load functions
+```{r}
+source('get_WHO_countries.R')
+source('process_epi_meta.R')
+source('process_pkg_meta.R')
+source('parse_travel_notes.R')
+source('add_voc_voi_label.R')
+source('count_seqs_by_country.R')
+source('export_travel_seqs.R')
+source('export_formattable.R')
+```
+### Step 1: Provide 4 input files and files names for output files
+two meta files from GISAID, the case count file from WHO, and the list of travel words
+
+```{r}
+setwd("~/GISAID_metadata_explorer")
+Epi_meta_file <- c("input_metadata_from_genomic_epi.tsv")
+Download_pkg_meta_file <- c("input_metadata_from_download_packages.tsv")
+WHO_case_file <- c("input_who.csv")
+List_of_travel_words <- c("input_list_of_travel_words.csv") 
+List_of_voc_voi <- c("input_variant_groups.csv")
+
+Output_file_name_GISAID_travel_related_sequences <- c("GISAID_metadata_travel_related.csv")
+Output_file_name_country_count_table_figure <- c("Table_of_countries_submitted_sequences_related_to_travel.jpg")
+Output_file_name_country_count_table_csv <- c("Table_of_countries_submitted_sequences_related_to_travel.csv")
+```
+### Step 2: Process input data files, parse travel notes and add VOI/VOC/Spike protein labels
+```{r}
+setwd("~/GISAID_metadata_explorer/input_files")
+who_countries <- get_WHO_countries(WHO_case_file)
+gis <- process_epi_meta(who_countries, Epi_meta_file)
+gis2 <- process_pkg_meta(who_countries, Download_pkg_meta_file)
+gis3 <- parse_travel_notes(gis1, gis2, List_of_travel_words) 
+gis4 <- add_voc_voi_label(gis3, List_of_voc_voi)
+setwd("~/GISAID_metadata_explorer")
+```
+### Step 3: Save count table by country as a csv file and a jpg figure, and write the travel related sequences to a file 
+```{r}
+travel_seqs <- export_travel_seqs(gis4, Output_file_name_GISAID_travel_related_sequences)# this will also write a file
+
+widget_formattable <- count_seqs_by_country(gis3, Output_file_name_country_count_table_csv)
+widget_formattable # print the table to screen
+
+# Export table 
+export_formattable(widget_formattable,
+                   Output_file_name_country_count_table_figure, 
+                   width = 800, height = 1250)
+```
+
+
